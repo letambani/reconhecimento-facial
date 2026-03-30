@@ -1,0 +1,6 @@
+# Recomendado: Python 3.9–3.13 (wheels de numpy/OpenCV). Em 3.14 pode ser necessário compilar.
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+python-multipart==0.0.17
+opencv-contrib-python-headless==4.10.0.84
+numpy>=1.26.4,<2.3
