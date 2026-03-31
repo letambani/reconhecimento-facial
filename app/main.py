@@ -7,15 +7,12 @@ import numpy as np
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
-
 from app.database import create_person, get_person, init_db
 from app.face_engine import FaceEngine
 from app.legacy_import import import_root_portraits
 
 ROOT = Path(__file__).resolve().parent.parent
 DB_DIR = ROOT / "Banco-de-dados-fotos"
-STATIC_DIR = ROOT / "docs"
 
 init_db(DB_DIR)
 engine = FaceEngine(DB_DIR)
@@ -157,4 +154,21 @@ def status():
     return engine.stats()
 
 
-app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="static")
+@app.get("/")
+def serve_index():
+    return FileResponse(ROOT / "index.html", media_type="text/html")
+
+
+@app.get("/index.html")
+def serve_index_alt():
+    return FileResponse(ROOT / "index.html", media_type="text/html")
+
+
+@app.get("/style.css")
+def serve_style():
+    return FileResponse(ROOT / "style.css", media_type="text/css")
+
+
+@app.get("/app.js")
+def serve_app_js():
+    return FileResponse(ROOT / "app.js", media_type="application/javascript")
