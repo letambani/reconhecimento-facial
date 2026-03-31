@@ -15,7 +15,7 @@ from app.legacy_import import import_root_portraits
 
 ROOT = Path(__file__).resolve().parent.parent
 DB_DIR = ROOT / "Banco-de-dados-fotos"
-STATIC_DIR = ROOT / "static"
+STATIC_DIR = ROOT / "docs"
 
 init_db(DB_DIR)
 engine = FaceEngine(DB_DIR)

@@ -45,6 +45,23 @@
   var MAX_PREVIEW_W = 640;
   var MAX_PREVIEW_H = 480;
 
+  /** Caminho do app (vazio em localhost na raiz; /repo em github.io/repo/). */
+  function appBasePath() {
+    var p = window.location.pathname.replace(/\/$/, "") || "/";
+    if (p.endsWith("/index.html")) {
+      p = p.slice(0, -"/index.html".length) || "/";
+    }
+    return p === "/" ? "" : p;
+  }
+
+  function apiUrl(path) {
+    return appBasePath() + path;
+  }
+
+  function isGitHubPages() {
+    return /\.github\.io$/i.test(window.location.hostname);
+  }
+
   function isHttpPage() {
     return window.location.protocol === "http:" || window.location.protocol === "https:";
   }
@@ -91,7 +108,8 @@
   function showResultIdentified(p, pct) {
     resultStrip.classList.remove("result-strip--warn");
     resultThumb.hidden = false;
-    resultThumb.src = "/api/pessoa/" + encodeURIComponent(p.id) + "/avatar?t=" + Date.now();
+    resultThumb.src =
+      apiUrl("/api/pessoa/" + encodeURIComponent(p.id) + "/avatar") + "?t=" + Date.now();
     resultName.textContent = p.nome;
     resultConf.textContent = "Confiança: " + pct + "%";
     resultBadge.textContent = "IDENTIFICADO";
@@ -187,6 +205,10 @@
   }
 
   function invalidateCaptureButton() {
+    if (isGitHubPages()) {
+      btnCapture.disabled = true;
+      return;
+    }
     var ok =
       isHttpPage() &&
       ((activeSource === "file" && lastBlobForApi !== null) ||
@@ -323,8 +345,13 @@
       pillServer.classList.add("is-bad");
       return false;
     }
+    if (isGitHubPages()) {
+      pillText.textContent = "Demo visual — API: clone e ./run.sh";
+      pillServer.classList.add("is-bad");
+      return false;
+    }
     try {
-      var r = await fetch("/api/status", { cache: "no-store" });
+      var r = await fetch(apiUrl("/api/status"), { cache: "no-store" });
       if (!r.ok) throw new Error();
       var j = await r.json();
       pillText.textContent = "Acervo: " + j.cadastros + " cadastro(s)";
@@ -343,6 +370,11 @@
       await refreshPill();
       return false;
     }
+    if (isGitHubPages()) {
+      setBlockServer(false);
+      await refreshPill();
+      return false;
+    }
     var ok = await refreshPill();
     if (!ok) {
       setBlockServer(true);
@@ -353,7 +385,15 @@
   }
 
   async function runCapture() {
-    if (!(await checkServerGate())) return;
+    var gateOk = await checkServerGate();
+    if (!gateOk) {
+      if (isGitHubPages()) {
+        alert(
+          "No GitHub Pages só há a interface estática.\n\nPara reconhecimento facial, clone o repositório no seu computador e execute ./run.sh."
+        );
+      }
+      return;
+    }
     btnCapture.disabled = true;
     hideFaceOverlay();
 
@@ -367,7 +407,7 @@
       fd.append("foto", blob, "captura.jpg");
       fd.append("aprender", optLearn.checked ? "true" : "false");
 
-      var res = await fetch("/api/identificar", { method: "POST", body: fd });
+      var res = await fetch(apiUrl("/api/identificar"), { method: "POST", body: fd });
       var data = await res.json().catch(function () {
         return {};
       });
@@ -505,7 +545,7 @@
     var btn = formQuick.querySelector('button[type="submit"]');
     btn.disabled = true;
     try {
-      var res = await fetch("/api/cadastro-rapido", { method: "POST", body: fd });
+      var res = await fetch(apiUrl("/api/cadastro-rapido"), { method: "POST", body: fd });
       var data = await res.json().catch(function () {
         return {};
       });
