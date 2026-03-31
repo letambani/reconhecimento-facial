@@ -316,6 +316,7 @@ body {
   overflow: hidden;
   background: #07090d;
   line-height: 0;
+  font-size: 0;
 }
 
 .viewport__video {
@@ -328,9 +329,11 @@ body {
 .viewport__canvas {
   display: block;
   width: 100%;
+  max-width: 720px;
   max-height: 420px;
   height: auto;
-  object-fit: contain;
+  margin: 0 auto;
+  vertical-align: top;
   background: #07090d;
 }
 
@@ -343,9 +346,10 @@ body {
   padding: 1.5rem;
   text-align: center;
   font-size: 0.9rem;
-  color: var(--muted);
   line-height: 1.5;
+  color: var(--muted);
   pointer-events: none;
+  z-index: 1;
 }
 
 .face-overlay {

@@ -41,6 +41,7 @@
   var activeSource = "file";
   var stream = null;
   var rafId = 0;
+  var camPreviewStarted = false;
 
   var MAX_PREVIEW_W = 640;
   var MAX_PREVIEW_H = 480;
@@ -137,6 +138,7 @@
 
   function showPreviewEmpty() {
     previewEmpty.hidden = false;
+    previewEmpty.style.display = "flex";
     previewCanvas.style.visibility = "hidden";
     previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
   }
@@ -152,7 +154,15 @@
     previewCanvas.height = ch;
     previewCtx.drawImage(source, 0, 0, cw, ch);
     previewEmpty.hidden = true;
+    previewEmpty.style.display = "none";
     previewCanvas.style.visibility = "visible";
+    video.style.display = "none";
+  }
+
+  function hideVideoElementForCanvasPipeline() {
+    video.setAttribute("hidden", "");
+    video.style.cssText =
+      "position:absolute;left:-9999px;top:0;width:1px;height:1px;opacity:0;pointer-events:none;";
   }
 
   function drawBlobToCanvas(blob) {
@@ -192,6 +202,7 @@
 
   function stopCamera() {
     stopPreviewLoop();
+    camPreviewStarted = false;
     if (stream) {
       stream.getTracks().forEach(function (t) {
         t.stop();
@@ -199,20 +210,20 @@
     }
     stream = null;
     video.srcObject = null;
+    video.removeAttribute("style");
     video.hidden = true;
     btnStopCam.hidden = true;
     camHint.textContent = "Webcam desligada.";
   }
 
   function invalidateCaptureButton() {
-    if (isGitHubPages()) {
-      btnCapture.disabled = true;
-      return;
-    }
+    var camReady =
+      stream !== null &&
+      (video.videoWidth > 0 || video.readyState >= 2);
     var ok =
       isHttpPage() &&
       ((activeSource === "file" && lastBlobForApi !== null) ||
-        (activeSource === "cam" && stream !== null && video.videoWidth > 0));
+        (activeSource === "cam" && camReady));
     btnCapture.disabled = !ok;
   }
 
@@ -293,20 +304,24 @@
         audio: false,
       });
       video.srcObject = stream;
-      video.hidden = true;
+      hideVideoElementForCanvasPipeline();
       btnStopCam.hidden = false;
+      camPreviewStarted = false;
       await video.play().catch(function () {});
-      video.addEventListener(
-        "loadeddata",
-        function once() {
-          video.removeEventListener("loadeddata", once);
-          camHint.textContent = "Enquadre o rosto e toque em CAPTURAR.";
-          lastBlobForApi = null;
-          startPreviewLoop();
-          invalidateCaptureButton();
-        },
-        { once: true }
-      );
+      function tryStartPreview() {
+        if (camPreviewStarted) return;
+        if (!video.videoWidth || !video.videoHeight) return;
+        camPreviewStarted = true;
+        video.removeEventListener("loadeddata", tryStartPreview);
+        video.removeEventListener("loadedmetadata", tryStartPreview);
+        camHint.textContent = "Enquadre o rosto e toque em CAPTURAR.";
+        lastBlobForApi = null;
+        startPreviewLoop();
+        invalidateCaptureButton();
+      }
+      tryStartPreview();
+      video.addEventListener("loadeddata", tryStartPreview);
+      video.addEventListener("loadedmetadata", tryStartPreview);
     } catch (e) {
       camHint.textContent = "Webcam indisponível.";
       alert('Permita a câmera ou use o modo ARQUIVO com uma foto JPG.');
@@ -390,6 +405,11 @@
       if (isGitHubPages()) {
         alert(
           "No GitHub Pages só há a interface estática.\n\nPara reconhecimento facial, clone o repositório no seu computador e execute ./run.sh."
+        );
+      } else if (isHttpPage()) {
+        alert(
+          "Não foi possível falar com o servidor da API.\n\n" +
+            "Abra em http://127.0.0.1:8765 e deixe ./run.sh rodando no terminal."
         );
       }
       return;
